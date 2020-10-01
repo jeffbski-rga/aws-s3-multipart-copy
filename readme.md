@@ -9,7 +9,7 @@ The module manages the copy parts order and bytes range according to the size of
 
 \*\* The package supports node 8 version and above.
 
-[![NPM](https://nodei.co/npm/aws-s3-multipart-copy.png)](https://nodei.co/npm/aws-s3-multipart-copy/)
+[![Travis CI](https://travis-ci.org/jeffbski-rga/aws-s3-multipart-copy.svg?branch=master)](https://travis-ci.org/jeffbski-rga/aws-s3-multipart-copy)
 
 ## Installing
 
