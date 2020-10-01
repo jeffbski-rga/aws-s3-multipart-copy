@@ -1,5 +1,8 @@
 {
-  "name": "aws-s3-multipart-copy",
+  "name": "@jeffbski-rga/aws-s3-multipart-copy",
+  "publishConfig": {
+    "access": "public"
+  },
   "version": "1.0.13",
   "description": "This node js package provides a simple usage for multipart copying between buckets in aws-s3 via the official aws-sdk. It manages the 3 steps required for multipart copy including byte-range offsetting and parts order.",
   "main": "index.js",
@@ -7,16 +10,10 @@
     "test": "nyc mocha ./test/unit-tests --recursive",
     "coveralls": "nyc report --reporter=text-lcov | coveralls"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Zooz/aws-s3-multipart-copy.git"
-  },
+  "repository": "github:jeffbski-rga/aws-s3-multipart-copy",
   "author": "Liad Berko",
   "license": "Apache 2.0",
-  "bugs": {
-    "url": "https://github.com/Zooz/aws-s3-multipart-copy.git/issues"
-  },
-  "homepage": "https://github.com/Zooz/aws-s3-multipart-copy.git#readme",
+  "homepage": "https://github.com/jeffbski-rga/aws-s3-multipart-copy",
   "nyc": {
     "check-coverage": true,
     "lines": 98,
