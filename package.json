@@ -5,9 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "nyc mocha ./test/unit-tests --recursive",
-    "coveralls": "nyc report --reporter=text-lcov | coveralls",
-    "snyk-protect": "snyk protect",
-    "prepare": "npm run snyk-protect"
+    "coveralls": "nyc report --reporter=text-lcov | coveralls"
   },
   "repository": {
     "type": "git",
@@ -37,8 +35,7 @@
     "report-dir": "coverage"
   },
   "dependencies": {
-    "lodash": "^4.17.15",
-    "snyk": "^1.316.1"
+    "lodash": "^4.17.20"
   },
   "devDependencies": {
     "aws-sdk": "^2.192.0",
@@ -51,6 +48,5 @@
     "rewire": "^3.0.2",
     "should": "^13.2.1",
     "sinon": "^4.3.0"
-  },
-  "snyk": true
+  }
 }
