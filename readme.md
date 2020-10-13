@@ -23,7 +23,7 @@ npm install @jeffbski-rga/aws-s3-multipart-copy
 
 - [@jeffbski-rga/aws-s3-multipart-copy](#jeffbski-rgaaws-s3-multipart-copy)
   - [Installing](#installing)
-  - [init](#init)
+  - [createDeps](#createdeps)
     - [Example](#example)
   - [copyObjectMultipart](#copyobjectmultipart)
     - [Request parameters](#request-parameters)
@@ -32,20 +32,35 @@ npm install @jeffbski-rga/aws-s3-multipart-copy
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-## init
+## createDeps
 
-aws-s3-multipart-copy is based on the aws-sdk and therefore requires an initialized AWS.S3 instance.
+aws-s3-multipart-copy is based on the aws-sdk and requires a log object, so createDeps creates a flattened dependcy object with a `log` and async fns that perform s3 commands.
 
-Also, it requires a logger instance which supports 'info' and 'error' level of logging (meaning logger.info and logger.error are functions).
+Also, it requires a log instance which supports 'info' and 'error' level of logging (meaning logger.info and logger.error are functions).
+
+If resilience is desired then these s3 functions can be wrapped to retry on certain types of errors.
+
+```js
+const deps = createDeps(s3, log);
+/*
+{
+  log,
+  s3CreateMultipartUpload,
+  s3UploadPartCopy,
+  s3AbortMultipartUpload,
+  s3ListParts,
+  s3CompleteMultipartUpload
+}
+```
 
 ### Example
 
 ```js
-let bunyan = require('bunyan'),
-    AWS = require('aws-sdk'),
-    s3Module = require('@jeffbski-rga/aws-s3-multipart-copy');
+const bunyan = require('bunyan'),
+    AWS = require('aws-sdk');
+const {createDeps, copyObjectMultipart} = require('@jeffbski-rga/aws-s3-multipart-copy');
 
-let logger = bunyan.createLogger({
+const log = bunyan.createLogger({
         name: 'copy-object-multipart',
         level: 'info',
         version: 1.0.0,
@@ -53,9 +68,8 @@ let logger = bunyan.createLogger({
         serializers: { err: bunyan.stdSerializers.err }
     });
 
-let s3 = new AWS.S3();
-
-s3Module.init(s3, logger);
+const s3 = new AWS.S3();
+const deps = createDeps(s3, log);
 ```
 
 ## copyObjectMultipart
@@ -69,6 +83,7 @@ The method receives two parameters: options and request_context
 
 ### Request parameters
 
+- deps: Object(mandatory) - moduleDeps log and async fns that perform s3 commands
 - options: Object (mandatory) - keys inside this object must be as specified below
   - source_bucket: String (mandatory) - The bucket that holds the object you wish to copy
   - object_key: String (mandatory) - The full path (including the name of the object) to the object you wish to copy
@@ -111,8 +126,9 @@ The method receives two parameters: options and request_context
 Positive
 
 ```js
-let request_context = "request_context";
-let options = {
+const { createDeps, copyObjectMultipart } = require("@jeffbski-rga/aws-s3-multipart-copy");
+const request_context = "request_context";
+const options = {
   source_bucket: "source_bucket",
   object_key: "object_key",
   destination_bucket: "destination_bucket",
@@ -122,9 +138,9 @@ let options = {
   copied_object_permissions: "bucket-owner-full-control",
   expiration_period: 100000,
 };
+const deps = createDeps(s3, log);
 
-return s3Module
-  .copyObjectMultipart(options, request_context)
+return copyObjectMultipart(deps, options, request_context)
   .then((result) => {
     console.log(result);
   })
@@ -146,8 +162,9 @@ return s3Module
 Negative 1 - abort action passed but copy parts were not removed
 
 ```js
-let request_context = "request_context";
-let options = {
+const { createDeps, copyObjectMultipart } = require("@jeffbski-rga/aws-s3-multipart-copy");
+const request_context = "request_context";
+const options = {
   source_bucket: "source_bucket",
   object_key: "object_key",
   destination_bucket: "destination_bucket",
@@ -157,9 +174,9 @@ let options = {
   copied_object_permissions: "bucket-owner-full-control",
   expiration_period: 100000,
 };
+const deps = createDeps(s3, log);
 
-return s3Module
-  .copyObjectMultipart(options, request_context)
+return copyObjectMultipart(deps, options, request_context)
   .then((result) => {
     // handle result
   })
@@ -180,8 +197,9 @@ return s3Module
 Negative 2 - abort action succeded
 
 ```js
-let request_context = "request_context";
-let options = {
+const { createDeps, copyObjectMultipart } = require("@jeffbski-rga/aws-s3-multipart-copy");
+const request_context = "request_context";
+const options = {
   source_bucket: "source_bucket",
   object_key: "object_key",
   destination_bucket: "destination_bucket",
@@ -191,9 +209,9 @@ let options = {
   copied_object_permissions: "bucket-owner-full-control",
   expiration_period: 100000,
 };
+const deps = createDeps(s3, log);
 
-return s3Module
-  .copyObjectMultipart(options, request_context)
+return copyObjectMultipart(deps, options, request_context)
   .then((result) => {
     // handle result
   })
