@@ -13,6 +13,7 @@ import {
   CompleteMultipartUploadCommandOutput,
   AbortMultipartUploadCommandOutput,
   UploadPartCopyCommandInput,
+  ServerSideEncryption,
 } from '@aws-sdk/client-s3';
 import { AbortSignal } from '@aws-sdk/types';
 import Bottleneck from 'bottleneck';
@@ -257,10 +258,10 @@ export class CopyMultipart {
     };
 
     params.ACL =
-      copied_object_permissions || DEFAULT_COPIED_OBJECT_PERMISSIONS;
+      copied_object_permissions as CreateMultipartUploadCommandInput["ACL"] || DEFAULT_COPIED_OBJECT_PERMISSIONS;
     if (expiration_period) params.Expires = expiration_period;
     if (server_side_encryption)
-      params.ServerSideEncryption = server_side_encryption;
+      params.ServerSideEncryption = server_side_encryption as CreateMultipartUploadCommandInput["ServerSideEncryption"];
     if (content_type) params.ContentType = content_type;
     if (content_disposition)
       params.ContentDisposition = content_disposition;
@@ -268,7 +269,7 @@ export class CopyMultipart {
     if (content_language) params.ContentLanguage = content_language;
     if (metadata) params.Metadata = metadata;
     if (cache_control) params.CacheControl = cache_control;
-    if (storage_class) params.StorageClass = storage_class;
+    if (storage_class) params.StorageClass = storage_class as CreateMultipartUploadCommandInput["StorageClass"];
 
     const command = new CreateMultipartUploadCommand(params);
 
