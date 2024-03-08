@@ -85,18 +85,19 @@ The method receives two parameters: options and request_context
 
 - deps: Object(mandatory) - moduleDeps log and async fns that perform s3 commands
 - options: Object (mandatory) - keys inside this object must be as specified below
-  - source_bucket: String (mandatory) - The bucket that holds the object you wish to copy
-  - object_key: String (mandatory) - The full path (including the name of the object) to the object you wish to copy
-  - destination_bucket: String (mandatory) - The bucket that you wish to copy to
-  - copied_object_name: String (mandatory) - The full path (including the name of the object) for the copied object in the destination bucket
-  - object_size: Integer (mandatory) - A number indicating the size of the object you wish to copy in bytes
-  - copy_part_size_bytes: Integer (optional) - A number indicating the size of each copy part in the process, if not passed it will be set to a default of 50MB. This value must be between 5MB and 5GB - 5MB.
-    \*\* if object size does not divide exactly with the part size desired, last part will be smaller or larger (depending on remainder size)
-  - copied_object_permissions: String (optional) - The permissions to be given for the copied object as specified in [aws s3 ACL docs](https://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#permissions), if not passed it will be set to a default of 'private'
-  - expiration_period: Integer/Date (optional) - A number (milliseconds) or Date indicating the time the copied object will remain in the destination before it will be deleted, if not passed there will be no expiration period for the object
-  - content_type: String (optional) A standard MIME type describing the format of the object data
-  - metadata: Object (optional) - A map of metadata to store with the object in S3
-  - cache_control: String (optional) - Specifies caching behavior along the request/reply chain
+    - source_bucket: String (mandatory) - The bucket that holds the object you wish to copy
+    - object_key: String (mandatory) - The full path (including the name of the object) to the object you wish to copy
+    - destination_bucket: String (mandatory) - The bucket that you wish to copy to
+    - copied_object_name: String (mandatory) - The full path (including the name of the object) for the copied object in the destination bucket
+    - object_size: Integer (mandatory) - A number indicating the size of the object you wish to copy in bytes
+    - copy_part_size_bytes: Integer (optional) - A number indicating the size of each copy part in the process, if not passed it will be set to a default of 50MB. This value must be between 5MB and 5GB - 5MB.
+        ** if object size does not divide exactly with the part size desired, last part will be smaller or larger (depending on remainder size)
+    - copied_object_permissions: String (optional) - The permissions to be given for the copied object as specified in [aws s3 ACL docs](https://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#permissions), if not passed it will be set to a default of 'private'
+    - expiration_period: Integer/Date (optional) - A number (milliseconds) or Date indicating the time the copied object will remain in the destination before it will be deleted, if not passed there will be no expiration period for the object
+    - content_type: String (optional) A standard MIME type describing the format of the object data
+    - metadata: Object (optional) - A map of metadata to store with the object in S3
+    - cache_control: String (optional) - Specifies caching behavior along the request/reply chain
+    - storage_class: String (optional) - Specifies the storage class for the copied object. The valid values are specified in the [aws s3 docs](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateMultipartUpload.html#AmazonS3-CreateMultipartUpload-request-header-StorageClass). When unset, the class will be 'STANDARD'
 - request_context: String (optional) - this parameter will be logged in every log message, if not passed it will remain undefined.
 
 ### Response
@@ -137,6 +138,7 @@ const options = {
   copy_part_size_bytes: 50000000,
   copied_object_permissions: "bucket-owner-full-control",
   expiration_period: 100000,
+  storage_class: 'STANDARD'
 };
 const deps = createDeps(s3, log);
 
@@ -173,6 +175,7 @@ const options = {
   copy_part_size_bytes: 50000000,
   copied_object_permissions: "bucket-owner-full-control",
   expiration_period: 100000,
+  storage_class: 'STANDARD'
 };
 const deps = createDeps(s3, log);
 
@@ -208,6 +211,7 @@ const options = {
   copy_part_size_bytes: 50000000,
   copied_object_permissions: "bucket-owner-full-control",
   expiration_period: 100000,
+  storage_class: 'STANDARD'
 };
 const deps = createDeps(s3, log);
 
