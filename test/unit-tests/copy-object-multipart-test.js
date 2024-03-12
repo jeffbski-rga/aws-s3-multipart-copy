@@ -2,8 +2,7 @@
 
 const { createDeps, CopyMultipart } = require("../../src");
 
-let bunyan = require("bunyan"),
-  sinon = require("sinon"),
+let sinon = require("sinon"),
   should = require("should"),
   deepCopy = require("deepcopy"),
   {
@@ -14,17 +13,14 @@ let bunyan = require("bunyan"),
     UploadPartCopyCommand,
     ListPartsCommand,
   } = require("@aws-sdk/client-s3"),
-  testData = require("../utils/unit-tests-data"),
-  APP_VERSION = module.exports.version,
-  logger = bunyan.createLogger({
-    name: "copy-object-multipart",
-    level: "info",
-    version: APP_VERSION,
-    logType: "copy-object-multipart-log",
-    serializers: { err: bunyan.stdSerializers.err },
-  });
+  testData = require("../utils/unit-tests-data");
 
-let loggerInfoSpy, loggerErrorSpy, sendStub, listPartsStub, s3Client;
+const logger = {
+  info: (...args) => { console.log(...args); },
+  error: (...args) => { console.error(...args); }
+};
+
+let loggerInfoSpy, loggerErrorSpy, sendStub;
 
 let createMultipartUploadStubCallCount = 0;
 let createMultipartUploadArgs = [];
