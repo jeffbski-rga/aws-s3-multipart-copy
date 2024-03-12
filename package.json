@@ -13,7 +13,8 @@
   ],
   "scripts": {
     "build": "tsup",
-    "test": "tsc && nyc mocha ./compiledTypescript/test/unit-tests --recursive"
+    "prepare": "npm run test && npm run build",
+    "test": "c8 --reporter=lcov --reporter=text mocha --require ts-node/register ./test/unit-tests --recursive"
   },
   "repository": "github:jeffbski-rga/aws-s3-multipart-copy",
   "author": "Liad Berko",
@@ -21,7 +22,6 @@
   "homepage": "https://github.com/jeffbski-rga/aws-s3-multipart-copy",
   "nyc": {
     "check-coverage": true,
-    "lines": 98,
     "include": [
       "src"
     ],
@@ -37,21 +37,20 @@
     "report-dir": "coverage"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.142.0",
+    "@aws-sdk/client-s3": "^3.529.1",
     "bottleneck": "^2.19.5",
     "rxjs": "^7.8.0"
   },
   "devDependencies": {
     "@types/node": "^18.7.6",
     "bunyan": "^1.8.15",
+    "c8": "^9.1.0",
     "deepcopy": "^2.1.0",
-    "fast-xml-parser": "^4.3.5",
     "mocha": "^10.0.0",
-    "nyc": "^15.1.0",
     "pkginfo": "^0.4.1",
-    "rewire": "^6.0.0",
     "should": "^13.2.3",
     "sinon": "^14.0.0",
+    "ts-node": "^10.9.2",
     "tsup": "^6.5.0",
     "typescript": "^4.7.4"
   }
