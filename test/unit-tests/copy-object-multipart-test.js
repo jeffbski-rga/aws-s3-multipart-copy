@@ -1,13 +1,11 @@
 "use strict";
 
-const { CopyMultipart } = require("../../src");
+const { createDeps, CopyMultipart } = require("../../src");
 
 let bunyan = require("bunyan"),
   sinon = require("sinon"),
   should = require("should"),
   deepCopy = require("deepcopy"),
-  rewire = require("rewire"),
-  s3Module = rewire("../../src/copy-object-multipart"),
   {
     S3Client,
     CreateMultipartUploadCommand,
@@ -16,7 +14,6 @@ let bunyan = require("bunyan"),
     UploadPartCopyCommand,
     ListPartsCommand,
   } = require("@aws-sdk/client-s3"),
-  pkginfo = require("pkginfo")(module, "version"),
   testData = require("../utils/unit-tests-data"),
   APP_VERSION = module.exports.version,
   logger = bunyan.createLogger({
@@ -68,23 +65,90 @@ describe("AWS S3 multipart copy client unit tests", function() {
     sinon.restore();
   });
 
-  describe("Testing init function", function() {
-    it("Should pass when given valid s3 and logger objects", function() {
-      s3Client = new S3Client();
-      const copyMultipart = new s3Module.CopyMultipart({ s3Client, logger });
-      should(copyMultipart.s3Client).equal(s3Client);
+  describe("Testing createDeps function", function() {
+    it("Should create s3 client functions object w/o providing logger", function() {
+      const s3ClientConfig = {};
+      const {
+        s3Client,
+        logger,
+        s3CreateMultipartUpload,
+        s3UploadPartCopy,
+        s3AbortMultipartUpload,
+        s3ListParts,
+        s3CompleteMultipartUpload
+      } = createDeps({
+        awsClientS3: {
+          S3Client,
+          CreateMultipartUploadCommand,
+          UploadPartCopyCommand,
+          AbortMultipartUploadCommand,
+          ListPartsCommand,
+          CompleteMultipartUploadCommand
+        }
+      }, s3ClientConfig);
+      should(s3Client).exist;
+      should(logger).exist;
+      should(s3CreateMultipartUpload).exist;
+      should(s3UploadPartCopy).exist;
+      should(s3AbortMultipartUpload).exist;
+      should(s3ListParts).exist;
+      should(s3CompleteMultipartUpload).exist;
     });
+    it("Should create s3 client functions object with logger", function() {
+      const myLogger = {
+        info: () => { },
+        error: () => { }
+      }
+      const s3ClientConfig = {};
+      const {
+        s3Client,
+        logger,
+        s3CreateMultipartUpload,
+        s3UploadPartCopy,
+        s3AbortMultipartUpload,
+        s3ListParts,
+        s3CompleteMultipartUpload
+      } = createDeps({
+        awsClientS3: {
+          S3Client,
+          CreateMultipartUploadCommand,
+          UploadPartCopyCommand,
+          AbortMultipartUploadCommand,
+          ListPartsCommand,
+          CompleteMultipartUploadCommand
+        },
+        logger: myLogger
+      }, s3ClientConfig);
+      should(s3Client).exist;
+      should(logger).equal(myLogger);
+      should(s3CreateMultipartUpload).exist;
+      should(s3UploadPartCopy).exist;
+      should(s3AbortMultipartUpload).exist;
+      should(s3ListParts).exist;
+      should(s3CompleteMultipartUpload).exist;
+    });
+
   });
 
   describe("Testing copyObjectMultipart", function() {
+    let awsClientDeps;
     let copyMultipart;
 
     before(() => {
-      s3Client = new S3Client();
-      copyMultipart = new CopyMultipart({ s3Client, logger });
+      awsClientDeps = createDeps({
+        awsClientS3: {
+          S3Client,
+          CreateMultipartUploadCommand,
+          UploadPartCopyCommand,
+          AbortMultipartUploadCommand,
+          ListPartsCommand,
+          CompleteMultipartUploadCommand
+        }, logger
+      });
+      copyMultipart = new CopyMultipart({ awsClientDeps, params: testData.full_request_options });
       loggerInfoSpy.resetHistory();
       loggerErrorSpy.resetHistory();
-      sendStub = sinon.stub(s3Client, "send");
+      sendStub = sinon.stub(awsClientDeps.s3Client, "send");
     });
 
     beforeEach(() => {
@@ -111,6 +175,10 @@ describe("AWS S3 multipart copy client unit tests", function() {
           return testData.listPartsStub_positive_response;
         }
       });
+    });
+
+    it("Should succeed when called in normal fashion", async () => {
+      await copyMultipart.done();
     });
 
     it("Should succeed with all variables passed", function() {

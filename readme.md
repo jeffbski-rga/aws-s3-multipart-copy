@@ -2,8 +2,12 @@
 
 Fork of aws-s3-multipart-copy to fix issues with broken dependencies from snyk
 
+Also includes code from https://github.com/spencer-jacobs/aws-s3-multipart-copy which switched to using AWS SDK V3.
+
 Wraps [aws-sdk](https://www.npmjs.com/package/aws-sdk) with a multipart-copy manager, in order to provide an easy way to copy large objects from one bucket to another in aws-s3.
 The module manages the copy parts order and bytes range according to the size of the object and the desired copy part size. It speeds up the multipart copying process by sending multiple copy-part requests simultaneously.
+
+This fork allows you to provide the exact AWS SDK V3 version that you want to use in the createDeps function rather than requiring this library to continuously be updated. The output deps `awsClientDeps` are then provided to the CopyObjectMultipart constructor. This structure also makes it easy to mock out awsClientDeps for testing.
 
 \*\* The package supports aws-sdk version '2006-03-01' and above.
 
@@ -25,7 +29,7 @@ npm install @jeffbski-rga/aws-s3-multipart-copy
   - [Installing](#installing)
   - [createDeps](#createdeps)
     - [Example](#example)
-  - [copyObjectMultipart](#copyobjectmultipart)
+  - [CopyObjectMultipart](#Copyobjectmultipart)
     - [Request parameters](#request-parameters)
     - [Response](#response)
     - [Example](#example-1)
@@ -41,15 +45,38 @@ Also, it requires a log instance which supports 'info' and 'error' level of logg
 If resilience is desired then these s3 functions can be wrapped to retry on certain types of errors.
 
 ```js
-const deps = createDeps(s3, log);
+const {
+    S3Client,
+    CreateMultipartUploadCommand,
+    AbortMultipartUploadCommand,
+    CompleteMultipartUploadCommand,
+    UploadPartCopyCommand,
+    ListPartsCommand,
+} = require("@aws-sdk/client-s3"),
+const awsClientS3 = {
+    S3Client,
+    CreateMultipartUploadCommand,
+    AbortMultipartUploadCommand,
+    CompleteMultipartUploadCommand,
+    UploadPartCopyCommand,
+    ListPartsCommand,
+};
+const logger = {
+  info: (/* args */) => {},
+  error: (/* args */) => {}
+};
+const s3ClientConfig = {};
+
+const awsClientDeps = createDeps({awsClientS3, logger}, s3ClientConfig);
 /*
 {
-  log,
-  s3CreateMultipartUpload,
-  s3UploadPartCopy,
-  s3AbortMultipartUpload,
-  s3ListParts,
-  s3CompleteMultipartUpload
+  s3Client: S3Client;
+  logger: Logger;
+  s3CreateMultipartUpload: (p: CreateMultipartUploadCommandInput, h: HttpHandlerOptions) => Promise<CreateMultipartUploadCommandOutput>;
+  s3UploadPartCopy: (p: UploadPartCopyCommandInput, h: HttpHandlerOptions) => Promise<UploadPartCopyCommandOutput>;
+  s3AbortMultipartUpload: (p: AbortMultipartUploadCommandInput, h: HttpHandlerOptions) => Promise<AbortMultipartUploadCommandOutput>;
+  s3ListParts: (p: ListPartsCommandInput) => Promise<ListPartsCommandOutput>;
+  s3CompleteMultipartUpload: (p: CompleteMultipartUploadCommandInput, h: HttpHandlerOptions) => Promise<CompleteMultipartUploadCommandOutput>;
 }
 ```
 
@@ -60,7 +87,7 @@ const bunyan = require('bunyan'),
     AWS = require('aws-sdk');
 const {createDeps, copyObjectMultipart} = require('@jeffbski-rga/aws-s3-multipart-copy');
 
-const log = bunyan.createLogger({
+const logger = bunyan.createLogger({
         name: 'copy-object-multipart',
         level: 'info',
         version: 1.0.0,
@@ -68,14 +95,29 @@ const log = bunyan.createLogger({
         serializers: { err: bunyan.stdSerializers.err }
     });
 
-const s3 = new AWS.S3();
-const deps = createDeps(s3, log);
+const {
+    S3Client,
+    CreateMultipartUploadCommand,
+    AbortMultipartUploadCommand,
+    CompleteMultipartUploadCommand,
+    UploadPartCopyCommand,
+    ListPartsCommand,
+} = require("@aws-sdk/client-s3"),
+const awsClientS3 = {
+    S3Client,
+    CreateMultipartUploadCommand,
+    AbortMultipartUploadCommand,
+    CompleteMultipartUploadCommand,
+    UploadPartCopyCommand,
+    ListPartsCommand,
+};
+const s3ClientConfig = {};
+const awsClientDeps = createDeps({awsClientS3, logger}, s3ClientConfig);
 ```
 
-## copyObjectMultipart
+## CopyObjectMultipart
 
-After module is initialized, the copyObjectMultipart functionality is ready for usage.
-copyObjectMultipart returns a promise and can only copy (and not upload) objects from bucket to bucket.
+Create a new instance of CopyObjectMultipart class to prepare for use.
 
 \*\* Objects size for multipart copy must be at least 5MB.
 
@@ -83,8 +125,8 @@ The method receives two parameters: options and request_context
 
 ### Request parameters
 
-- deps: Object(mandatory) - moduleDeps log and async fns that perform s3 commands
-- options: Object (mandatory) - keys inside this object must be as specified below
+- awsClientDeps: Object(mandatory) : CreateDepsOutput - deps created from the createDeps call, these are the functions that perform side effects calling s3 commands and for logging
+- params: Object (mandatory) : CopyObjectMultipartOptions - keys inside this object must be as specified below
     - source_bucket: String (mandatory) - The bucket that holds the object you wish to copy
     - object_key: String (mandatory) - The full path (including the name of the object) to the object you wish to copy
     - destination_bucket: String (mandatory) - The bucket that you wish to copy to
@@ -98,7 +140,9 @@ The method receives two parameters: options and request_context
     - metadata: Object (optional) - A map of metadata to store with the object in S3
     - cache_control: String (optional) - Specifies caching behavior along the request/reply chain
     - storage_class: String (optional) - Specifies the storage class for the copied object. The valid values are specified in the [aws s3 docs](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateMultipartUpload.html#AmazonS3-CreateMultipartUpload-request-header-StorageClass). When unset, the class will be 'STANDARD'
-- request_context: String (optional) - this parameter will be logged in every log message, if not passed it will remain undefined.
+- requestContext: String (optional) - this parameter will be logged in every log message, if not passed it will remain undefined.
+- abortController: optional AbortController instance which can be used to abort a copy
+- maxConcurrentParts: optional integer to controll how many concurrent copies are used, defaults to 4
 
 ### Response
 
@@ -128,8 +172,28 @@ Positive
 
 ```js
 const { createDeps, copyObjectMultipart } = require("@jeffbski-rga/aws-s3-multipart-copy");
+const {
+    S3Client,
+    CreateMultipartUploadCommand,
+    AbortMultipartUploadCommand,
+    CompleteMultipartUploadCommand,
+    UploadPartCopyCommand,
+    ListPartsCommand,
+} = require("@aws-sdk/client-s3"),
+
+const awsClientS3 = {
+    S3Client,
+    CreateMultipartUploadCommand,
+    AbortMultipartUploadCommand,
+    CompleteMultipartUploadCommand,
+    UploadPartCopyCommand,
+    ListPartsCommand,
+};
+const s3ClientConfig = {};
+const awsClientDeps = createDeps({awsClientS3 /*, logger */}, s3ClientConfig);
+
 const request_context = "request_context";
-const options = {
+const params = {
   source_bucket: "source_bucket",
   object_key: "object_key",
   destination_bucket: "destination_bucket",
@@ -140,9 +204,9 @@ const options = {
   expiration_period: 100000,
   storage_class: 'STANDARD'
 };
-const deps = createDeps(s3, log);
 
-return copyObjectMultipart(deps, options, request_context)
+const copyObjectMultipart = new CopyObjectMultipart({ awsClientDeps, params, requestContext});
+return copyObjectMultipart.done()
   .then((result) => {
     console.log(result);
   })
@@ -161,32 +225,11 @@ return copyObjectMultipart(deps, options, request_context)
         */
 ```
 
+#### Examples of error messages
+
 Negative 1 - abort action passed but copy parts were not removed
 
 ```js
-const { createDeps, copyObjectMultipart } = require("@jeffbski-rga/aws-s3-multipart-copy");
-const request_context = "request_context";
-const options = {
-  source_bucket: "source_bucket",
-  object_key: "object_key",
-  destination_bucket: "destination_bucket",
-  copied_object_name: "someLogicFolder/copied_object_name",
-  object_size: 70000000,
-  copy_part_size_bytes: 50000000,
-  copied_object_permissions: "bucket-owner-full-control",
-  expiration_period: 100000,
-  storage_class: 'STANDARD'
-};
-const deps = createDeps(s3, log);
-
-return copyObjectMultipart(deps, options, request_context)
-  .then((result) => {
-    // handle result
-  })
-  .catch((err) => {
-    console.log(err);
-  });
-
 /*
             err = {
                 message: 'Abort procedure passed but copy parts were not removed'
@@ -200,29 +243,6 @@ return copyObjectMultipart(deps, options, request_context)
 Negative 2 - abort action succeded
 
 ```js
-const { createDeps, copyObjectMultipart } = require("@jeffbski-rga/aws-s3-multipart-copy");
-const request_context = "request_context";
-const options = {
-  source_bucket: "source_bucket",
-  object_key: "object_key",
-  destination_bucket: "destination_bucket",
-  copied_object_name: "someLogicFolder/copied_object_name",
-  object_size: 70000000,
-  copy_part_size_bytes: 50000000,
-  copied_object_permissions: "bucket-owner-full-control",
-  expiration_period: 100000,
-  storage_class: 'STANDARD'
-};
-const deps = createDeps(s3, log);
-
-return copyObjectMultipart(deps, options, request_context)
-  .then((result) => {
-    // handle result
-  })
-  .catch((err) => {
-    console.log(err);
-  });
-
 /*
             err = {
                     message: 'multipart copy aborted',
