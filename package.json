@@ -3,12 +3,18 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "2.0.0",
-  "description": "This node js package provides a simple usage for multipart copying between buckets in aws-s3 via the official aws-sdk. It manages the 3 steps required for multipart copy including byte-range offsetting and parts order.",
-  "main": "index.js",
+  "version": "3.0.0",
+  "description": "This node js package provides a simple usage for multipart copying between buckets in aws-s3 via the official aws-sdk v3. It manages the 3 steps required for multipart copy including byte-range offsetting and parts order.",
+  "main": "dist/index.js",
+  "source": "src/index.ts",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "test": "nyc mocha ./test/unit-tests --recursive",
-    "coveralls": "nyc report --reporter=text-lcov | coveralls"
+    "build": "tsup",
+    "prepublishOnly": "npm run test && npm run build",
+    "test": "c8 --reporter=lcov --reporter=text mocha --require ts-node/register ./test/unit-tests --recursive"
   },
   "repository": "github:jeffbski-rga/aws-s3-multipart-copy",
   "author": "Liad Berko",
@@ -16,7 +22,6 @@
   "homepage": "https://github.com/jeffbski-rga/aws-s3-multipart-copy",
   "nyc": {
     "check-coverage": true,
-    "lines": 98,
     "include": [
       "src"
     ],
@@ -31,17 +36,20 @@
     "all": true,
     "report-dir": "coverage"
   },
-  "dependencies": {},
+  "dependencies": {
+    "bottleneck": "^2.19.5",
+    "rxjs": "^7.8.0"
+  },
   "devDependencies": {
-    "aws-sdk": "^2.192.0",
-    "bunyan": "^1.8.12",
-    "coveralls": "^3.0.2",
-    "deepcopy": "^0.6.3",
-    "mocha": "^4.1.0",
-    "nyc": "^14.1.1",
-    "pkginfo": "^0.4.1",
-    "rewire": "^3.0.2",
-    "should": "^13.2.1",
-    "sinon": "^4.3.0"
+    "@aws-sdk/client-s3": "^3.529.1",
+    "@types/node": "^20.11.26",
+    "c8": "^9.1.0",
+    "deepcopy": "^2.1.0",
+    "mocha": "^10.0.0",
+    "should": "^13.2.3",
+    "sinon": "^17.0.1",
+    "ts-node": "^10.9.2",
+    "tsup": "^8.0.2",
+    "typescript": "^5.4.2"
   }
 }

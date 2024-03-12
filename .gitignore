@@ -62,3 +62,6 @@ typings/
 launch.json
 poc.js
 .idea
+
+# typescript output, not saved in git, will be built and deployed as package
+dist
