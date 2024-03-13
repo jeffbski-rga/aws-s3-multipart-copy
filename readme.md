@@ -85,7 +85,7 @@ const awsClientDeps = createDeps({awsClientS3, logger}, s3ClientConfig);
 ```js
 const bunyan = require('bunyan'),
     AWS = require('aws-sdk');
-const {createDeps, copyObjectMultipart} = require('@jeffbski-rga/aws-s3-multipart-copy');
+const {createDeps, CopyMultipart } = require('@jeffbski-rga/aws-s3-multipart-copy');
 
 const logger = bunyan.createLogger({
         name: 'copy-object-multipart',
@@ -162,16 +162,16 @@ The method receives two parameters: options and request_context
     - "requester"
 
 - In case multipart copy fails, three scenarios are possible:
-  - The copy will be aborted and copy parts will be deleted from s3 - copyObjectMultipart will reject
-  - The abort procedure passed but the copy parts were not deleted from s3 - copyObjectMultipart will reject
-  - The abort procedure fails and the copy parts will remain in s3 - copyObjectMultipart will reject
+  - The copy will be aborted and copy parts will be deleted from s3 - CopyMultipart will reject
+  - The abort procedure passed but the copy parts were not deleted from s3 - CopyMultipart will reject
+  - The abort procedure fails and the copy parts will remain in s3 - CopyMultipart will reject
 
 ### Example
 
 Positive
 
 ```js
-const { createDeps, copyObjectMultipart } = require("@jeffbski-rga/aws-s3-multipart-copy");
+const { createDeps, CopyMultipart } = require("@jeffbski-rga/aws-s3-multipart-copy");
 const {
     S3Client,
     CreateMultipartUploadCommand,
@@ -205,8 +205,8 @@ const params = {
   storage_class: 'STANDARD'
 };
 
-const copyObjectMultipart = new CopyObjectMultipart({ awsClientDeps, params, requestContext});
-return copyObjectMultipart.done()
+const copyMultipart = new CopyMultipart({ awsClientDeps, params, requestContext});
+return copyMultipart.done()
   .then((result) => {
     console.log(result);
   })
