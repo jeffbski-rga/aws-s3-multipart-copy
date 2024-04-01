@@ -1,6 +1,5 @@
 import {
   S3Client,
-  S3ClientConfig,
   CreateMultipartUploadCommand,
   UploadPartCopyCommand,
   AbortMultipartUploadCommand,
@@ -29,11 +28,9 @@ const DEFAULT_MAX_CONCURRENT_COPIES = 4;
 
 export interface createDepsInput {
   awsClientS3: AWSClientS3;
-  logger?: Logger;
 }
 
 export interface AWSClientS3 { // refer to the class constructors not instance types
-  S3Client: typeof S3Client;
   CreateMultipartUploadCommand: typeof CreateMultipartUploadCommand;
   UploadPartCopyCommand: typeof UploadPartCopyCommand;
   AbortMultipartUploadCommand: typeof AbortMultipartUploadCommand;
@@ -42,41 +39,36 @@ export interface AWSClientS3 { // refer to the class constructors not instance t
 }
 
 export interface createDepsOutput {
-  s3Client: S3Client;
-  logger: Logger;
-  s3CreateMultipartUpload: (p: CreateMultipartUploadCommandInput, h: HttpHandlerOptions) => Promise<CreateMultipartUploadCommandOutput>;
-  s3UploadPartCopy: (p: UploadPartCopyCommandInput, h: HttpHandlerOptions) => Promise<UploadPartCopyCommandOutput>;
-  s3AbortMultipartUpload: (p: AbortMultipartUploadCommandInput, h: HttpHandlerOptions) => Promise<AbortMultipartUploadCommandOutput>;
-  s3ListParts: (p: ListPartsCommandInput) => Promise<ListPartsCommandOutput>;
-  s3CompleteMultipartUpload: (p: CompleteMultipartUploadCommandInput, h: HttpHandlerOptions) => Promise<CompleteMultipartUploadCommandOutput>;
+  s3CreateMultipartUpload: (s: S3Client, p: CreateMultipartUploadCommandInput, h: HttpHandlerOptions) => Promise<CreateMultipartUploadCommandOutput>;
+  s3UploadPartCopy: (s: S3Client, p: UploadPartCopyCommandInput, h: HttpHandlerOptions) => Promise<UploadPartCopyCommandOutput>;
+  s3AbortMultipartUpload: (s: S3Client, p: AbortMultipartUploadCommandInput, h: HttpHandlerOptions) => Promise<AbortMultipartUploadCommandOutput>;
+  s3ListParts: (s: S3Client, p: ListPartsCommandInput) => Promise<ListPartsCommandOutput>;
+  s3CompleteMultipartUpload: (s: S3Client, p: CompleteMultipartUploadCommandInput, h: HttpHandlerOptions) => Promise<CompleteMultipartUploadCommandOutput>;
 }
 
-export function createDeps({ awsClientS3, logger = getDefaultLogger() }: createDepsInput, s3ClientConfig: S3ClientConfig): createDepsOutput {
-  const s3Client = new awsClientS3.S3Client(s3ClientConfig);
+export function createDeps(awsClientS3: AWSClientS3): createDepsOutput {
 
-  async function s3CreateMultipartUpload(params: CreateMultipartUploadCommandInput, httpHandlerOptions: HttpHandlerOptions) {
+  async function s3CreateMultipartUpload(s3Client: S3Client, params: CreateMultipartUploadCommandInput, httpHandlerOptions: HttpHandlerOptions) {
     return /* await */ s3Client.send(new awsClientS3.CreateMultipartUploadCommand(params), httpHandlerOptions);
   }
 
-  async function s3UploadPartCopy(params: UploadPartCopyCommandInput, httpHandlerOptions: HttpHandlerOptions) {
+  async function s3UploadPartCopy(s3Client: S3Client, params: UploadPartCopyCommandInput, httpHandlerOptions: HttpHandlerOptions) {
     return /* await */ s3Client.send(new awsClientS3.UploadPartCopyCommand(params), httpHandlerOptions);
   }
 
-  async function s3AbortMultipartUpload(params: AbortMultipartUploadCommandInput, httpHandlerOptions: HttpHandlerOptions) {
+  async function s3AbortMultipartUpload(s3Client: S3Client, params: AbortMultipartUploadCommandInput, httpHandlerOptions: HttpHandlerOptions) {
     return /* await */ s3Client.send(new awsClientS3.AbortMultipartUploadCommand(params), httpHandlerOptions);
   }
 
-  async function s3ListParts(params: ListPartsCommandInput) {
+  async function s3ListParts(s3Client: S3Client, params: ListPartsCommandInput) {
     return /* await */ s3Client.send(new awsClientS3.ListPartsCommand(params));
   }
 
-  async function s3CompleteMultipartUpload(params: CompleteMultipartUploadCommandInput, httpHandlerOptions: HttpHandlerOptions) {
+  async function s3CompleteMultipartUpload(s3Client: S3Client, params: CompleteMultipartUploadCommandInput, httpHandlerOptions: HttpHandlerOptions) {
     return /* await */ s3Client.send(new awsClientS3.CompleteMultipartUploadCommand(params), httpHandlerOptions);
   }
 
   return {
-    s3Client,
-    logger,
     s3CreateMultipartUpload,
     s3UploadPartCopy,
     s3AbortMultipartUpload,
@@ -125,19 +117,22 @@ export interface CopyObjectMultipartOptions {
 }
 
 export interface Options {
+  s3Client: S3Client;
   awsClientDeps: createDepsOutput;
-  abortController?: AbortController;
   params: CopyObjectMultipartOptions;
+  logger?: Logger;
+  abortController?: AbortController;
   requestContext?: string; // if provided it will be added to log records as a context
   maxConcurrentParts?: number;
 }
 
 export class CopyMultipart {
+  s3Client: S3Client;
   awsClientDeps: createDepsOutput;
+  params: CopyObjectMultipartOptions;
   logger: Logger;
   abortController: AbortController;
   abortSignal: AbortSignal;
-  params: CopyObjectMultipartOptions;
   requestContext: string;
   processedBytes: number;
   bottleneck: Bottleneck;
@@ -147,9 +142,10 @@ export class CopyMultipart {
   uploadId: string | undefined;
 
   constructor(options: Options) {
+    this.s3Client = options.s3Client;
     this.awsClientDeps = options.awsClientDeps;
-    this.logger = options.awsClientDeps.logger;
     this.params = options.params;
+    this.logger = options.logger || getDefaultLogger();
     this.requestContext = options.requestContext || '';
     this.abortController = options.abortController ?? new AbortController();
     this.abortSignal = this.abortController.signal as AbortSignal;
@@ -336,7 +332,7 @@ export class CopyMultipart {
     if (cache_control) params.CacheControl = cache_control;
     if (storage_class) params.StorageClass = storage_class as CreateMultipartUploadCommandInput["StorageClass"];
 
-    return this.awsClientDeps.s3CreateMultipartUpload(params, { abortSignal: this.abortSignal }).then((result) => {
+    return this.awsClientDeps.s3CreateMultipartUpload(this.s3Client, params, { abortSignal: this.abortSignal }).then((result) => {
       this.logger.info({
         msg: `multipart copy initiated successfully: ${JSON.stringify(
           result
@@ -380,7 +376,7 @@ export class CopyMultipart {
       return Promise.reject('Aborted');
     }
 
-    return this.awsClientDeps.s3UploadPartCopy(params, {
+    return this.awsClientDeps.s3UploadPartCopy(this.s3Client, params, {
       abortSignal: this.abortSignal,
     })
       .then((result) => {
@@ -416,11 +412,11 @@ export class CopyMultipart {
       UploadId: upload_id,
     };
 
-    return this.awsClientDeps.s3AbortMultipartUpload(params, {
+    return this.awsClientDeps.s3AbortMultipartUpload(this.s3Client, params, {
       abortSignal: this.abortSignal,
     })
       .then(() => {
-        return this.awsClientDeps.s3ListParts(params);
+        return this.awsClientDeps.s3ListParts(this.s3Client, params);
       })
       .catch((err) => {
         this.logger.error({
@@ -477,7 +473,7 @@ export class CopyMultipart {
       UploadId: upload_id,
     };
 
-    return this.awsClientDeps.s3CompleteMultipartUpload(params, {
+    return this.awsClientDeps.s3CompleteMultipartUpload(this.s3Client, params, {
       abortSignal: this.abortSignal,
     })
       .then((result) => {
