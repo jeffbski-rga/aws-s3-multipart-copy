@@ -64,59 +64,20 @@ describe("AWS S3 multipart copy client unit tests", function() {
   describe("Testing createDeps function", function() {
     it("Should create s3 client functions object w/o providing logger", function() {
       const s3ClientConfig = {};
+      const awsClientS3 = {
+        CreateMultipartUploadCommand,
+        UploadPartCopyCommand,
+        AbortMultipartUploadCommand,
+        ListPartsCommand,
+        CompleteMultipartUploadCommand
+      };
       const {
-        s3Client,
-        logger,
         s3CreateMultipartUpload,
         s3UploadPartCopy,
         s3AbortMultipartUpload,
         s3ListParts,
         s3CompleteMultipartUpload
-      } = createDeps({
-        awsClientS3: {
-          S3Client,
-          CreateMultipartUploadCommand,
-          UploadPartCopyCommand,
-          AbortMultipartUploadCommand,
-          ListPartsCommand,
-          CompleteMultipartUploadCommand
-        }
-      }, s3ClientConfig);
-      should(s3Client).exist;
-      should(logger).exist;
-      should(s3CreateMultipartUpload).exist;
-      should(s3UploadPartCopy).exist;
-      should(s3AbortMultipartUpload).exist;
-      should(s3ListParts).exist;
-      should(s3CompleteMultipartUpload).exist;
-    });
-    it("Should create s3 client functions object with logger", function() {
-      const myLogger = {
-        info: () => { },
-        error: () => { }
-      }
-      const s3ClientConfig = {};
-      const {
-        s3Client,
-        logger,
-        s3CreateMultipartUpload,
-        s3UploadPartCopy,
-        s3AbortMultipartUpload,
-        s3ListParts,
-        s3CompleteMultipartUpload
-      } = createDeps({
-        awsClientS3: {
-          S3Client,
-          CreateMultipartUploadCommand,
-          UploadPartCopyCommand,
-          AbortMultipartUploadCommand,
-          ListPartsCommand,
-          CompleteMultipartUploadCommand
-        },
-        logger: myLogger
-      }, s3ClientConfig);
-      should(s3Client).exist;
-      should(logger).equal(myLogger);
+      } = createDeps(awsClientS3);
       should(s3CreateMultipartUpload).exist;
       should(s3UploadPartCopy).exist;
       should(s3AbortMultipartUpload).exist;
@@ -131,20 +92,19 @@ describe("AWS S3 multipart copy client unit tests", function() {
     let copyMultipart;
 
     before(() => {
-      awsClientDeps = createDeps({
-        awsClientS3: {
-          S3Client,
-          CreateMultipartUploadCommand,
-          UploadPartCopyCommand,
-          AbortMultipartUploadCommand,
-          ListPartsCommand,
-          CompleteMultipartUploadCommand
-        }, logger
-      });
-      copyMultipart = new CopyMultipart({ awsClientDeps, params: testData.full_request_options });
+      const awsClientS3 = {
+        CreateMultipartUploadCommand,
+        UploadPartCopyCommand,
+        AbortMultipartUploadCommand,
+        ListPartsCommand,
+        CompleteMultipartUploadCommand
+      };
+      awsClientDeps = createDeps(awsClientS3);
+      const s3Client = new S3Client({});
+      copyMultipart = new CopyMultipart({ s3Client, awsClientDeps, params: testData.full_request_options, logger });
       loggerInfoSpy.resetHistory();
       loggerErrorSpy.resetHistory();
-      sendStub = sinon.stub(awsClientDeps.s3Client, "send");
+      sendStub = sinon.stub(s3Client, "send");
     });
 
     beforeEach(() => {
